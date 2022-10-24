@@ -15,6 +15,7 @@
 #include "DQCIRParser.h"
 #include "QDIMACSParser.h"
 #include "DQDIMACSParser.h"
+#include "SDIMACSParser.h"
 
 using std::string;
 
@@ -45,7 +46,7 @@ void handle_sighup(int signum)
   }
 }
 
-enum class filetype: int { None, QDIMACS, DQDIMACS, QCIR, DQCIR };
+enum class filetype: int { None, QDIMACS, DQDIMACS, QCIR, DQCIR, SDIMACS };
 
 filetype checkFileType(const string& filename) {
   auto file = std::ifstream(filename);
@@ -68,7 +69,7 @@ filetype checkFileType(const string& filename) {
     } else if (qcir && explicit_dependencies) {
       return filetype::DQCIR;
     } else if (!qcir && !explicit_dependencies) {
-      return filetype::QDIMACS;
+      return filetype::SDIMACS;
     } else if (!qcir && explicit_dependencies) {
       return filetype::DQDIMACS;
     } else {
@@ -79,6 +80,7 @@ filetype checkFileType(const string& filename) {
 }
 
 int main(int argc, char* argv[]) {
+  bool verbose = false;
   std::map<std::string, docopt::value> args = docopt::docopt(USAGE, { argv + 1, argv + argc }, true, "Unique v.0.1");
 
   unique_ptr<QBFParser> parser;
@@ -90,6 +92,10 @@ int main(int argc, char* argv[]) {
     case filetype::QDIMACS:
       parser = std::make_unique<QDIMACSParser>(input_filename);
       std::cerr << "Reading QDIMACS file: " << input_filename << std::endl;
+      break;
+    case filetype::SDIMACS:
+      parser = std::make_unique<SDIMACSParser>(input_filename);
+      std::cerr << "Reading SDIMACS file: " << input_filename << std::endl;
       break;
     case filetype::QCIR:
       parser = std::make_unique<QCIRParser>(input_filename);
@@ -137,7 +143,7 @@ int main(int argc, char* argv[]) {
     std::cerr << "Out of memory." << std::endl;
     extractor.reset();
   }
-
+  
   if (args["--output-file"]) {
     string output_filename = args["--output-file"].asString();
     std::cerr << "Writing to file: " << output_filename << std::endl;
@@ -145,7 +151,10 @@ int main(int argc, char* argv[]) {
       parser->writeQDIMACS(output_filename);
     } else if (args["--output-format"].asString() == "DIMACS") {
       parser->writeDIMACS(output_filename);
-    } else if (args["--output-format"].asString() == "QCIR") {
+    } else if (args["--output-format"].asString() == "SDIMACS") {
+      parser->writeSDIMACS(output_filename);
+    }
+    else if (args["--output-format"].asString() == "QCIR") {
       parser->writeQCIR(output_filename);
     } else if (args["--output-format"].asString() == "Verilog") {
       parser->writeVerilog(output_filename);
@@ -158,7 +167,9 @@ int main(int argc, char* argv[]) {
       parser->writeQDIMACS();
     } else if (args["--output-format"].asString() == "DIMACS") {
       parser->writeDIMACS();
-    } else if (args["--output-format"].asString() == "QCIR") {
+    } else if (args["--output-format"].asString() == "SDIMACS") {
+      parser->writeSDIMACS();
+    }else if (args["--output-format"].asString() == "QCIR") {
       parser->writeQCIR();
     } else if (args["--output-format"].asString() == "Verilog") {
       parser->writeVerilog();

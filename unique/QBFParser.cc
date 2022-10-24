@@ -81,6 +81,27 @@ void QBFParser::addVariable(const string& id, const VariableType type) {
   variable_gate_boundary++;
 }
 
+void QBFParser::addVariable(const string& id, const VariableType type, string probability) {
+  if (isNumber(id)) {
+    max_id_number = std::max(max_id_number, std::stoi(id));
+  }
+  int alias = getAlias(id);
+  gates[alias].variable_depth = max_quantifier_depth;
+  if (type == VariableType::Existential) {
+    gates[alias].gate_type = GateType::Existential;
+    number_variables[0]++;
+  } else  if (type == VariableType::Universal){
+    gates[alias].gate_type = GateType::Universal;
+    number_variables[1]++;
+  } else{
+    gates[alias].gate_type = GateType::Random;
+    number_variables[2]++;
+    probabilities[id] = probability;
+  }
+
+  variable_gate_boundary++;
+}
+
 void QBFParser::addGate(const string& id, const GateType& gate_type, const vector<string>& input_literals) {
   assert(gate_type == GateType::And || gate_type == GateType::Or);
   if (isNumber(id)) {
@@ -287,8 +308,15 @@ auto QBFParser::getDefinitionsFor(Extractor& extractor, VariableType type) {
 
 tuple<vector<int>, vector<int>, vector<bool>> QBFParser::getQueryVariableSets(VariableType type) {
   vector<int> defining_variables;
-  GateType variable_type = (type == VariableType::Universal) ? GateType::Universal : GateType::Existential;
+  GateType variable_type = (type == VariableType::Universal) ? GateType::Universal : (type == VariableType::Existential) ? GateType::Existential : GateType::Random;
   unsigned int alias = 1;
+  //Dont look for random vars
+  for(unsigned int a = 0; a < variable_gate_boundary; a++ )
+  {
+    if(gates[a].gate_type == GateType::Random){
+      defining_variables.push_back(a);
+    }
+  }
   if (type == VariableType::Universal) {
     // Don't look for unique Herbrand functions of outermost universals.
     for (; alias < variable_gate_boundary && gates[alias].gate_type == GateType::Universal; alias++) {
@@ -298,11 +326,12 @@ tuple<vector<int>, vector<int>, vector<bool>> QBFParser::getQueryVariableSets(Va
   for (; alias < variable_gate_boundary && gates[alias].gate_type != variable_type; alias++) {
     defining_variables.push_back(alias);
   }
-  // All remaining variables go into the query variables.
+  // All remaining variables, except for random variables, go into the query variables.
   vector<std::tuple<int, string, bool>> query_tuples;
 
   for (; alias < variable_gate_boundary; alias++) {
-    query_tuples.emplace_back(alias, gates[alias].gate_id, gates[alias].gate_type == variable_type);
+      if(gates[alias].gate_type != GateType::Random)
+        query_tuples.emplace_back(alias, gates[alias].gate_id, gates[alias].gate_type == variable_type);
   }
 
   if (comparator != nullptr) {
@@ -435,6 +464,16 @@ void QBFParser::doWriteQDIMACS(std::ostream& out) {
   printClauselist(matrix_clauses, out);
 }
 
+void QBFParser::doWriteSDIMACS(std::ostream& out) {
+  auto matrix_clauses = getMatrix(false);
+  out << "c defined variables: ";
+  std::copy(defined_ids.begin(), defined_ids.end(), std::ostream_iterator<string>(out, " "));
+  out << std::endl;
+  out << "p cnf " << max_id_number << " " << matrix_clauses.size() << std::endl;
+  printSDIMACSPrefix(out);
+  printClauselist(matrix_clauses, out);
+}
+
 void QBFParser::doWriteDIMACS(std::ostream& out) {
   auto definition_clauses = getDefinitionClauses();
   out << "c defined variables: ";
@@ -488,6 +527,40 @@ void QBFParser::printQDIMACSPrefix(std::ostream& out) {
   }
 }
 
+void QBFParser::printSDIMACSPrefix(std::ostream& out) {
+  GateType last_block_type = GateType::None;
+  bool first_variable_seen = false;
+  for (unsigned i = 1; i < variable_gate_boundary; i++) {
+    auto& gate = gates[i];
+    if (gate.gate_type == GateType::Existential || gate.gate_type == GateType::Universal || gate.gate_type == GateType::Random) {
+      if (gate.gate_type != last_block_type) { 
+        last_block_type = gate.gate_type;
+        if (first_variable_seen) {
+          out << "0" << std::endl; // Close last block unless this is the first variable.
+        }
+        auto block_start_string = (gate.gate_type == GateType::Existential) ? 'e' : (gate.gate_type == GateType::Universal) ?'a' : 'r';
+        out << block_start_string << " ";  // "Open" a new quantifier block.
+      }
+      out << gate.gate_id << " ";
+      first_variable_seen = true;
+    }
+  }
+  if (last_block_type == GateType::Universal) {
+
+    out << "0" << std::endl;
+    out << "e "; // Open new quantifier block for Tseitin variables.
+  }
+  for (unsigned alias = 1; alias < gates.size(); alias++) {
+    auto& gate = gates[alias];
+    if (gate.gate_type == GateType::And || gate.gate_type == GateType::Or) {
+      out << gate.gate_id << " ";
+    }
+  }
+  if (first_variable_seen) {
+    out << "0" << std::endl;
+  }
+}
+
 void QBFParser::writeQDIMACS(const string& filename) {
   std::ofstream out(filename);
   if (out) {
@@ -499,6 +572,19 @@ void QBFParser::writeQDIMACS(const string& filename) {
 
 void QBFParser::writeQDIMACS() {
   doWriteQDIMACS(std::cout);
+}
+
+void QBFParser::writeSDIMACS(const string& filename) {
+  std::ofstream out(filename);
+  if (out) {
+    doWriteSDIMACS(out);
+  } else {
+    std::cerr << "Error opening file: " << filename << std::endl;
+  }
+}
+
+void QBFParser::writeSDIMACS() {
+  doWriteSDIMACS(std::cout);
 }
 
 void QBFParser::writeDIMACS(const string& filename) {

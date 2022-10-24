@@ -15,11 +15,12 @@ using std::vector;
 using std::string;
 using std::tuple;
 using std::unordered_map;
+using std::map;
 
 typedef tuple<vector<int>,int> definition;
 
-enum class VariableType: int8_t { Existential = 0, Universal = 1};
-enum class GateType { None, Existential, Universal, And, Or };
+enum class VariableType: int8_t { Existential = 0, Universal = 1, Random = 2};
+enum class GateType { None, Existential, Universal, Random, And, Or };
 enum class GatePolarity: int { None = 0, Positive = 1, Negative = 2, Both = 3};
 
 struct Gate {
@@ -42,6 +43,8 @@ public:
   void writeQCIR();
   void writeQDIMACS(const string& filename);
   void writeQDIMACS();
+  void writeSDIMACS(const string& filename);
+  void writeSDIMACS();
   void writeDIMACS(const string& filename);
   void writeDIMACS();
   void writeVerilog();
@@ -50,9 +53,11 @@ public:
 protected:
   virtual void doGetDefinitions(Extractor& extractor);
   virtual void printQDIMACSPrefix(std::ostream& out);
+  virtual void printSDIMACSPrefix(std::ostream& out);
   virtual void doWriteQCIR(std::ostream& out);
   virtual void doWriteVerilog(std::ostream& out);
   void doWriteQDIMACS(std::ostream& out);
+  void doWriteSDIMACS(std::ostream& out);
   void doWriteDIMACS(std::ostream& out);
   void printClauselist(vector<vector<int>>& clause_list, std::ostream& out);
   void printQCIRPrefix(std::ostream& out);
@@ -73,6 +78,7 @@ protected:
   void addDefinitions(vector<definition>& definitions, vector<int>& defined_variables);
   auto getDefinitionsFor(Extractor& extractor, VariableType type);
   void addVariable(const string& id, const VariableType type);
+  void addVariable(const string& id, const VariableType type, string probability);
   void addGate(const string& id, const GateType& gate_type, const vector<string>& input_literals);
   unsigned int removeRedundant();
   int getAlias(const string& gate_id);
@@ -90,7 +96,8 @@ protected:
   unordered_map<string, int> id_to_alias;
   vector<Gate> gates;
   int variable_gate_boundary;
-  int number_variables[2];
+  int number_variables[3];
+  unordered_map<string, string> probabilities;
   int max_id_number;
   vector<string> defined_ids;
   vector<int> definition_aliases;
