@@ -115,7 +115,7 @@ void SDIMACSParser::printSDIMACSPrefix(std::ostream& out) {
     }
   }
   if (and_gates.size() > 0) {
-    if (last_block_type == GateType::Universal) { // Open new quantifier block if necessary.
+    if (last_block_type != GateType::Existential) { // Open new quantifier block if necessary.
       out << "0" << std::endl << "e ";
     }
     for (auto& alias: and_gates) {
