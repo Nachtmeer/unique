@@ -12,6 +12,7 @@
 #include "extractor.h"
 #include "QBFParser.h"
 #include "QCIRParser.h"
+#include "SCIRParser.h"
 #include "DQCIRParser.h"
 #include "QDIMACSParser.h"
 #include "DQDIMACSParser.h"
@@ -156,6 +157,8 @@ int main(int argc, char* argv[]) {
     }
     else if (args["--output-format"].asString() == "QCIR") {
       parser->writeQCIR(output_filename);
+    }else if (args["--output-format"].asString() == "SCIR") {
+      parser->writeSCIR(output_filename);
     } else if (args["--output-format"].asString() == "Verilog") {
       parser->writeVerilog(output_filename);
     } else {
@@ -171,6 +174,8 @@ int main(int argc, char* argv[]) {
       parser->writeSDIMACS();
     }else if (args["--output-format"].asString() == "QCIR") {
       parser->writeQCIR();
+    } else if (args["--output-format"].asString() == "SCIR") {
+      parser->writeSCIR();
     } else if (args["--output-format"].asString() == "Verilog") {
       parser->writeVerilog();
     } else {

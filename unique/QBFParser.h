@@ -41,6 +41,8 @@ public:
   void getDefinitions(Extractor& extractor);
   void writeQCIR(const string& filename);
   void writeQCIR();
+  void writeSCIR(const string& filename);
+  void writeSCIR();
   void writeQDIMACS(const string& filename);
   void writeQDIMACS();
   void writeSDIMACS(const string& filename);
@@ -55,6 +57,7 @@ protected:
   virtual void printQDIMACSPrefix(std::ostream& out);
   virtual void printSDIMACSPrefix(std::ostream& out);
   virtual void doWriteQCIR(std::ostream& out);
+  virtual void doWriteSCIR(std::ostream& out);
   virtual void doWriteVerilog(std::ostream& out);
   void doWriteQDIMACS(std::ostream& out);
   void doWriteSDIMACS(std::ostream& out);
@@ -63,6 +66,9 @@ protected:
   void printQCIRPrefix(std::ostream& out);
   void printQCIRGate(Gate& gate, std::ostream& out);
   void printQCIRGates(std::ostream& out);
+  void printSCIRPrefix(std::ostream& out);
+  //void printSCIRGate(Gate& gate, std::ostream& out);
+  //void printSCIRGates(std::ostream& out);
   void printAndOrGateVerilog(std::ostream& out, const int alias);
   template<typename T> void paste(std::ostream& out, vector<T>& arguments, const string& separator);
 
@@ -105,6 +111,7 @@ protected:
 
   static const string EXISTS_STRING;
   static const string FORALL_STRING;
+  static const string RANDOM_STRING;
   static const string OUTPUT_STRING;
   static const string AND_STRING;
   static const string OR_STRING;

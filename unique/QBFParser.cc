@@ -9,6 +9,7 @@
 
 const string QBFParser::FORALL_STRING = "forall";
 const string QBFParser::EXISTS_STRING = "exists";
+const string QBFParser::RANDOM_STRING = "random";
 const string QBFParser::OUTPUT_STRING = "output";
 const string QBFParser::AND_STRING = "and";
 const string QBFParser::OR_STRING = "or";
@@ -454,6 +455,19 @@ void QBFParser::writeQCIR() {
   doWriteQCIR(std::cout);
 }
 
+void QBFParser::writeSCIR(const string& filename) {
+  std::ofstream out(filename);
+  if (out) {
+    doWriteSCIR(out);
+  } else {
+    std::cerr << "Error opening file: " << filename << std::endl;
+  }
+}
+
+void QBFParser::writeSCIR(){
+  doWriteSCIR(std::cout);
+}
+
 void QBFParser::doWriteQDIMACS(std::ostream& out) {
   auto matrix_clauses = getMatrix(false);
   out << "c defined variables: ";
@@ -652,6 +666,49 @@ void QBFParser::printQCIRGates(std::ostream& out) {
 
 void QBFParser::doWriteQCIR(std::ostream& out) {
   printQCIRPrefix(out);
+  printQCIRGates(out);
+}
+
+void QBFParser::printSCIRPrefix(std::ostream& out) {
+  out << "#SCIR-G14" << std::endl; // Print "preamble".
+  GateType last_block_type = GateType::None;
+  bool first_variable_seen = false;
+  string currentProbability = "";
+  for (unsigned i = 1; i < variable_gate_boundary; i++) {
+    auto& gate = gates[i];
+    bool probabilityChanged = false;
+    if(gate.gate_type == GateType::Random){
+      if(currentProbability != probabilities.at(gate.gate_id))
+        probabilityChanged = true;
+    }
+    if (gate.gate_type == GateType::Existential || gate.gate_type == GateType::Universal || gate.gate_type == GateType::Random || probabilityChanged) {
+      if (gate.gate_type != last_block_type || probabilityChanged) { 
+        last_block_type = gate.gate_type;
+        if (first_variable_seen) {
+          out << ')' << std::endl; // Close last block unless this is the first variable.
+        }
+        auto& block_start_string = (gate.gate_type == GateType::Existential) ? EXISTS_STRING : (gate.gate_type == GateType::Universal) ?FORALL_STRING : RANDOM_STRING;
+        out << block_start_string << '('; // "Open" a new quantifier block.
+        if(gate.gate_type == GateType::Random){
+          out << probabilities.at(gate.gate_id) << ", " ; 
+          currentProbability = probabilities.at(gate.gate_id);
+          probabilityChanged = false;
+        }
+        out << gate.gate_id;
+      } else {
+        out << ", " << gate.gate_id;
+      }
+      first_variable_seen = true;
+    }
+  }
+  if (first_variable_seen) { // Close last block (if there were any quantified variables).
+    out << ')' << std::endl; 
+  }
+  out << "output(" << output_id << ')' << std::endl;
+}
+
+void QBFParser::doWriteSCIR(std::ostream& out) {
+  printSCIRPrefix(out);
   printQCIRGates(out);
 }
 

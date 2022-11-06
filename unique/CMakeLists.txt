@@ -32,6 +32,7 @@ endif()
 add_library(extractor extractor.cc)
 add_library(qbfparser QBFParser.h QBFParser.cc)
 add_library(qcirparser QCIRParser.h QCIRParser.cc)
+add_library(scirparser SCIRParser.h SCIRParser.cc)
 add_library(qdimacsparser QDIMACSParser.h QDIMACSParser.cc)
 add_library(sdimacsparser SDIMACSParser.h SDIMACSParser.cc)
 add_library(dqdimacsparser DQDIMACSParser.h DQDIMACSParser.cc)
@@ -41,9 +42,9 @@ add_library(comparator VariableComparator.h VariableComparator.cc)
 add_executable(unique determined.cc)
 
 if (BUILD_SHARED_LIBS)
-  target_link_libraries(unique docopt dqcirparser qcirparser qdimacsparser sdimacsparser dqdimacsparser qbfparser extractor ${INTERPOLATING_SOLVER_LIBRARY} comparator)
+  target_link_libraries(unique docopt dqcirparser qcirparser scirparser qdimacsparser sdimacsparser dqdimacsparser qbfparser extractor ${INTERPOLATING_SOLVER_LIBRARY} comparator)
 else()
-  target_link_libraries(unique docopt_s dqcirparser qcirparser qdimacsparser 
+  target_link_libraries(unique docopt_s dqcirparser qcirparser scirparser qdimacsparser 
   sdimacsparser dqdimacsparser qbfparser extractor ${INTERPOLATING_SOLVER_LIBRARY} comparator -static)
 endif()
 
